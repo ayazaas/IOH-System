@@ -132,34 +132,20 @@ DEFAULT_REGION_CONFIG = {
     ]
 }
 
-# All available regions
-ALL_REGIONS = {
-    "SDP (Indosat)": ["KEDAMEAN", "DAWARBLANDONG", "SANGKAPURA"],
-    "3KIOSK (Tri)": ["SIDAYU", "BENJENG", "JATIREJO", "KEMLAGI", "BABAT", "KEDUNGPRING"]
-}
-
+# Sistem hanya untuk DAWARBLANDONG
 if "kpi_calculator_config" not in st.session_state:
-    # Build per-region config
-    regions_config = {}
-    for mitra_type, area_list in ALL_REGIONS.items():
-        for area in area_list:
-            regions_config[area] = DEFAULT_REGION_CONFIG.copy()
-    
+    region_cfg = DEFAULT_REGION_CONFIG.copy()
+    region_cfg["prepaid_revenue"] = 0
+
     st.session_state.kpi_calculator_config = {
         "month": "FEBRUARI 2026",
-        "current_region": "KEDAMEAN",  # default region
-        "regions": regions_config
+        "regions": {
+            "DAWARBLANDONG": region_cfg
+        }
     }
 
 if "calculator_achievement" not in st.session_state:
-    st.session_state.calculator_achievement = {
-        "Trade Supply": {"target": 1000, "actual": 850},
-        "M2S Absolute": {"target": 500, "actual": 425},
-        "RGU GA FWA": {"target": 200, "actual": 160},
-        "tertiary_inner_percentage": 0.45,
-        "ach_rgu_ga": 0.82,
-        "growth_prepaid_revenue": 0.05
-    }
+    st.session_state.calculator_achievement = {}
 
 if "selected_boosts" not in st.session_state:
     st.session_state.selected_boosts = []
@@ -1430,9 +1416,9 @@ def get_score_multiplier(weighted_score, mapping):
             return slab["value"]
     return 0
 
-# ==========================================
+# ============================================= 
 # STEP 4: SLA TARIFF CALCULATION
-# ==========================================
+# =============================================
 def get_sla_tariff(tertiary_inner_pct, sla_tariff_config):
     """
     Hitung SLA Tariff dari Tertiary #B Inner:
@@ -1445,9 +1431,9 @@ def get_sla_tariff(tertiary_inner_pct, sla_tariff_config):
             return slab["rate"]
     return sla_tariff_config[-1]["rate"]
 
-# ==========================================
+# =============================================
 # STEP 5: COMPLIANCE INDEX (2-LAYER)
-# ==========================================
+# =============================================
 def calculate_compliance_index(ach_rgu_ga, growth_prepaid_revenue):
     """
     5A: ACH RGU-GA Score
@@ -1495,23 +1481,23 @@ def calculate_metrics(config, achievement):
     """
     
     # Step 0: Input data - Extract KPI percentages from dict structure
-    trade_supply_data = achievement.get("Trade Supply", {"target": 1000, "actual": 0})
-    m2s_absolute_data = achievement.get("M2S Absolute", {"target": 500, "actual": 0})
-    rgu_ga_data = achievement.get("RGU GA FWA", {"target": 200, "actual": 0})
-    
+    trade_supply_data = achievement.get("Trade Supply", {"target": 0, "actual": 0})
+    m2s_absolute_data = achievement.get("M2S Absolute", {"target": 0, "actual": 0})
+    rgu_ga_data = achievement.get("RGU GA FWA", {"target": 0, "actual": 0})
+
     # Calculate percentages
     if isinstance(trade_supply_data, dict):
-        trade_supply_pct = calculate_kpi_percentage(trade_supply_data.get("target", 1), trade_supply_data.get("actual", 0))
+        trade_supply_pct = calculate_kpi_percentage(trade_supply_data.get("target", 0), trade_supply_data.get("actual", 0))
     else:
         trade_supply_pct = trade_supply_data
-    
+
     if isinstance(m2s_absolute_data, dict):
-        m2s_absolute_pct = calculate_kpi_percentage(m2s_absolute_data.get("target", 1), m2s_absolute_data.get("actual", 0))
+        m2s_absolute_pct = calculate_kpi_percentage(m2s_absolute_data.get("target", 0), m2s_absolute_data.get("actual", 0))
     else:
         m2s_absolute_pct = m2s_absolute_data
-    
+
     if isinstance(rgu_ga_data, dict):
-        rgu_ga_pct = calculate_kpi_percentage(rgu_ga_data.get("target", 1), rgu_ga_data.get("actual", 0))
+        rgu_ga_pct = calculate_kpi_percentage(rgu_ga_data.get("target", 0), rgu_ga_data.get("actual", 0))
     else:
         rgu_ga_pct = rgu_ga_data
     
@@ -1739,32 +1725,24 @@ with st.sidebar:
     
     st.success("✅ Data berhasil dimuat!")
     
-    mitra = st.selectbox("Tipe Mitra", ["SDP (Indosat)", "3KIOSK (Tri)"])
-    if "Indosat" in mitra:
-        sheet_kpi = "EST LR IM3"
-        areas = ["KEDAMEAN", "DAWARBLANDONG", "SANGKAPURA"]
-        theme = "highlight-yellow"
-    else:
-        sheet_kpi = "EST LR 3"
-        areas = ["SIDAYU", "BENJENG", "JATIREJO", "KEMLAGI", "BABAT", "KEDUNGPRING"]
-        theme = "highlight-purple"
-        
-    wilayah = st.selectbox("Wilayah", areas)
-    
-    # Sync selected region dengan config
-    st.session_state.kpi_calculator_config["current_region"] = wilayah
-    
+
+    # --- HANYA UNTUK SDP DAWARBLANDONG ---
+    wilayah = "DAWARBLANDONG"
+    sheet_kpi = "EST LR IM3"
+    theme = "highlight-yellow"
+
     bulan_map = {"Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6, 
                  "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12}
     pilih_bulan = st.selectbox("Pilih Bulan (Grafik)", list(bulan_map.keys()))
     bulan_idx = bulan_map[pilih_bulan]
-    
+
     st.divider()
     days = st.number_input("Jml Hari", value=31)
     curr = st.number_input("Hari Ke-", value=18)
     run_rate = days/curr if curr>0 else 0
-    
-    st.header("⚙️ Konfigurasi KPI")
+
+    # --- Konfigurasi KPI (Wilayah: DAWARBLANDONG) ---
+    st.header("⚙️ Konfigurasi KPI (Wilayah: DAWARBLANDONG)")
     kpi_config = []
     def_kpis = [("Trade Supply", 40), ("M2S Absolute", 40), ("RGU FWA", 20)]
     for i, (d_name, d_w) in enumerate(def_kpis):
@@ -1772,7 +1750,6 @@ with st.sidebar:
         with c1: kn = st.text_input(f"KPI {i+1}", value=d_name, key=f"kn{i}", label_visibility="collapsed")
         with c2: kw = st.number_input("W", value=d_w, key=f"kw{i}", label_visibility="collapsed")
         kpi_config.append({"name": kn, "weight": kw/100})
-        
         if kn in st.session_state.kpi_interventions:
             inv = st.session_state.kpi_interventions[kn]
             gc = "sidebar-metric-value-red" if inv['gap'] > 0 else "sidebar-metric-value-green"
@@ -1781,31 +1758,29 @@ with st.sidebar:
                 r1a.markdown(f"<span style='font-size:10px'>Tgt</span><br><b>{inv['target']:,.0f}</b>", unsafe_allow_html=True)
                 r1b.markdown(f"<span style='font-size:10px'>Act</span><br><b>{inv['actual']:,.0f}</b>", unsafe_allow_html=True)
                 st.markdown(f"Gap: <span class='{gc}'>{inv['gap']:,.0f}</span>", unsafe_allow_html=True)
-    
-    # ========================
-    # KONFIGURASI CALCULATOR (BARU)
-    # ========================
+
+    # --- Konfigurasi Calculator (Wilayah: DAWARBLANDONG) ---
     st.divider()
-    with st.expander("⚙️ Config Calculator (SDP Partners) - Wilayah: " + wilayah, expanded=False):
-        st.write(f"**Konfigurasi untuk Wilayah: {wilayah}**")
-        
-        # Get region config reference
-        region_cfg = st.session_state.kpi_calculator_config["regions"][wilayah]
-        
+    full_config = st.session_state.kpi_calculator_config
+    region_cfg = full_config["regions"]["DAWARBLANDONG"]
+    # WARNING jika prepaid_revenue masih 0 (letakkan di atas expander agar selalu terlihat)
+    if region_cfg["prepaid_revenue"] == 0:
+        st.warning("Silakan isi Prepaid Revenue terlebih dahulu agar kalkulasi berjalan.")
+
+    with st.expander(f"⚙️ Config Calculator (SDP Partners) - Wilayah: DAWARBLANDONG", expanded=False):
+        st.write(f"**Konfigurasi untuk Wilayah: DAWARBLANDONG**")
         st.write("**Basic Settings**")
         st.session_state.kpi_calculator_config["month"] = st.text_input(
             "Month",
             value=st.session_state.kpi_calculator_config["month"],
             key="calc_month"
         )
-        
         region_cfg["prepaid_revenue"] = st.number_input(
             "Prepaid Revenue (Rp)",
             value=region_cfg["prepaid_revenue"],
             step=100_000_000,
             key="calc_prepaid"
         )
-        
         st.divider()
         st.write("**KPI Metrics Weight (SDP Rule)**")
         for i, metric in enumerate(region_cfg["kpi_metrics"]):
@@ -1819,9 +1794,8 @@ with st.sidebar:
                     min_value=0.0,
                     max_value=1.0,
                     step=0.01,
-                    key=f"calc_weight_{i}_{wilayah}"
+                    key=f"calc_weight_{i}_DAWARBLANDONG"
                 )
-        
         st.divider()
         st.write("**Score Multiplier Mapping**")
         st.info("⚠️ SDP Rule: Score Multiplier dihitung otomatis dari Weighted Score (70-110% cap)")
@@ -1838,9 +1812,8 @@ with st.sidebar:
                     min_value=0.0,
                     max_value=2.0,
                     step=0.01,
-                    key=f"calc_mult_{i}_{wilayah}"
+                    key=f"calc_mult_{i}_DAWARBLANDONG"
                 )
-        
         st.divider()
         st.write("**SLA Tariff (Tertiary #B Inner)**")
         for i, slab in enumerate(region_cfg["sla_tariff"]):
@@ -1855,13 +1828,20 @@ with st.sidebar:
                     min_value=0.0,
                     max_value=5.0,
                     step=0.01,
-                    key=f"calc_tariff_{i}_{wilayah}"
+                    key=f"calc_tariff_{i}_DAWARBLANDONG"
                 )
                 slab["rate"] = new_rate_percent / 100
 
 # PREPARE DATA
 df_kpi_sheet = get_sheet_fuzzy(dfs, sheet_kpi.replace(" ", "")) 
-if df_kpi_sheet is None: df_kpi_sheet = get_sheet_fuzzy(dfs, sheet_kpi)
+
+# --- HANYA UNTUK SDP DAWARBLANDONG ---
+wilayah = "DAWARBLANDONG"
+sheet_kpi = "EST LR IM3"
+
+df_kpi_sheet = get_sheet_fuzzy(dfs, sheet_kpi.replace(" ", "")) 
+if df_kpi_sheet is None:
+    df_kpi_sheet = get_sheet_fuzzy(dfs, sheet_kpi)
 
 t_tr, a_tr, t_m2, a_m2, t_fw, a_fw = 0,0,0,0,0,0
 rgu_compliance = 0
@@ -1870,15 +1850,10 @@ rgu_compliance = 0
 total_income_fix_paid_in = 0
 total_amount_debit = 0
 
-# Untuk Indosat: hitung Jumlah Transaksi Match dengan inner join TRX & COM
-if "Indosat" in mitra:
-    t_tr, total_income_fix_paid_in, total_amount_debit = calculate_transaction_match(dfs, wilayah, transaction_types=['Indosat Reload', 'Purchase Data Package'])
-    # a_tr = Total Paid In dari matched transactions (BUKAN dari KPI sheet lagi)
-    a_tr = total_income_fix_paid_in
-else:
-    # Untuk Tri: gunakan logika lama
-    if df_kpi_sheet is not None:
-        t_tr, a_tr = get_kpi_values(df_kpi_sheet, wilayah, "TRADE SUPPLY")
+# Hanya proses untuk SDP Dawarblandong (Indosat)
+t_tr, total_income_fix_paid_in, total_amount_debit = calculate_transaction_match(dfs, wilayah, transaction_types=['Indosat Reload', 'Purchase Data Package'])
+# a_tr = Total Paid In dari matched transactions (BUKAN dari KPI sheet lagi)
+a_tr = total_income_fix_paid_in
 
 if df_kpi_sheet is not None:
     t_m2, a_m2 = get_kpi_values(df_kpi_sheet, wilayah, "M2S")
@@ -1891,42 +1866,30 @@ saldo_total_bulan_ini = 0
 saldo_breakdown_df = pd.DataFrame()
 source_info = ""
 
-if "Indosat" in mitra:
-    df_sal = get_sheet_fuzzy(dfs, "SAL")
-    if df_sal is not None:
-        saldo_chart_df, saldo_total_bulan_ini, saldo_breakdown_df = get_daily_saldo_data_indosat(df_sal, wilayah, bulan_idx)
-        source_info = "Sumber: Sheet SAL (Filter: 'ESCM Allocation')"
-else: # TRI (3KIOSK)
-    df_prim = get_sheet_fuzzy(dfs, "PRIM")
-    if df_prim is not None:
-        saldo_chart_df, saldo_total_bulan_ini = get_daily_saldo_data_tri(df_prim, wilayah, bulan_idx)
-        source_info = "Sumber: Sheet PRIM (Kolom: Amount)"
+df_sal = get_sheet_fuzzy(dfs, "SAL")
+if df_sal is not None:
+    saldo_chart_df, saldo_total_bulan_ini, saldo_breakdown_df = get_daily_saldo_data_indosat(df_sal, wilayah, bulan_idx)
+    source_info = "Sumber: Sheet SAL (Filter: 'ESCM Allocation')"
 
 # --- PROSES SALES TRI (NATURAL VS BOOSTING & BREAKDOWN) ---
 tri_sales_nat = 0
 tri_sales_boost = 0
 df_sales_breakdown = pd.DataFrame()
 
-if "Tri" in mitra:
-    df_sec = get_sheet_fuzzy(dfs, "SEC DSE")
-    if df_sec is not None:
-        tri_sales_nat, tri_sales_boost, df_sales_breakdown = get_tri_sales_analysis(df_sec, wilayah)
-
 # ==========================================
 # KALKULATOR STRATEGI (SDP PARTNERS FEB 2026)
 # ==========================================
 st.subheader(f"🧮 Kalkulator Strategi (SDP Partners): {wilayah}")
 
-# Get config untuk region yang dipilih saat ini
+# Get config untuk DAWARBLANDONG
 full_config = st.session_state.kpi_calculator_config
-current_region = full_config["current_region"]
-region_config = full_config["regions"][current_region]
+region_config = full_config["regions"]["DAWARBLANDONG"]
 
 # Merge config (tambahkan month dan prepaid_revenue ke region config)
 config = {
     **region_config,
     "month": full_config["month"],
-    "region": current_region
+    "region": "DAWARBLANDONG"
 }
 
 # ==========================================
@@ -1979,6 +1942,9 @@ with tab_sla:
             "ach_rgu_ga": 0.85,  # 85% - above compliance
             "growth_prepaid_revenue": 0.05  # 5% growth - positive
         })
+        
+        # Simpan ke session state agar Tab 3 (Tactical Income) bisa membacanya
+        st.session_state.calculator_achievement = maksimal_achievement
         
         # Calculate maksimal scenario
         result_maksimal = calculate_metrics(config, maksimal_achievement)
@@ -2087,33 +2053,33 @@ with tab_sla:
         # MODE 2: SKENARIO CUSTOM
         # ==========================================
         st.markdown("### 📥 Skenario Custom - Input Capaian Anda")
+        st.error("Isi semua inputan di bawah ini dengan angka yang benar sesuai data real agar kalkulasi akurat.")
         st.info("📋 Alur: KPI Cap (70-110%) → Weighted Score → Score Multiplier → SLA Tariff → Compliance Index → Final Fee")
-        
+
         # ==========================================
         # STEP 0 & 1: INPUT DATA MENTAH & KPI CAP
         # ==========================================
         st.markdown("#### STEP 0-1: Input Target & Actual Setiap KPI")
-        st.info("💡 Input TARGET (nilai standar) dan ACTUAL (capaian), sistem akan auto-hitung %")
-        
+
         kpi_percentages = {}
-        
+
         for i, metric in enumerate(config["kpi_metrics"]):
             st.markdown(f"**{metric['name']}**")
-            
             kpi_name = metric["name"]
-            kpi_data = st.session_state.calculator_achievement.get(kpi_name, {"target": metric["target"], "actual": 0})
-            
+            # Default input awal 0
+            kpi_data = st.session_state.calculator_achievement.get(kpi_name, {"target": 0, "actual": 0})
+
             col_t, col_a, col_p = st.columns(3)
-            
+
             with col_t:
                 target_val = st.number_input(
                     "Target",
-                    value=int(kpi_data["target"]) if kpi_data else metric["target"],
-                    min_value=1,
+                    value=int(kpi_data["target"]) if kpi_data else 0,
+                    min_value=0,
                     step=10,
                     key=f"target_{kpi_name}"
                 )
-            
+
             with col_a:
                 actual_val = st.number_input(
                     "Actual",
@@ -2122,27 +2088,31 @@ with tab_sla:
                     step=10,
                     key=f"actual_{kpi_name}"
                 )
-            
+
             # Calculate percentage automatically
             percentage = calculate_kpi_percentage(target_val, actual_val)
             kpi_percentages[kpi_name] = percentage
-            
+
+
             # Show percentage and capped value
             capped_pct = apply_kpi_cap(percentage)
-            
             with col_p:
                 st.metric("Achievement %", f"{format_decimal(percentage)}%", "")
-                if percentage != capped_pct:
-                    st.warning(f"→ Capped: {format_decimal(capped_pct)}%")
+                if percentage < 70:
+                    st.warning("Nilai minimum pencapaian adalah 70%. Jika di bawah 70%, insentif tidak akan didapatkan (nilai kalkulasi dianggap 0).")
+                    st.info(f"Dipakai untuk kalkulasi: {format_decimal(capped_pct)}%")
+                elif percentage > 110:
+                    st.warning(f"Nilai ini di atas maksimum. Untuk kalkulasi, nilai akan dianggap 110%.")
+                    st.info(f"Dipakai untuk kalkulasi: {format_decimal(capped_pct)}%")
                 else:
-                    st.success(f"✓ {format_decimal(capped_pct)}%")
-            
+                    st.success(f"✓ {format_decimal(capped_pct)}% (dipakai untuk kalkulasi)")
+
             # Save to session state
             st.session_state.calculator_achievement[kpi_name] = {
                 "target": target_val,
                 "actual": actual_val
             }
-            
+
             st.divider()
         
         # ==========================================
@@ -2190,12 +2160,12 @@ with tab_sla:
                 key="tertiary_b"
             )
             st.session_state.calculator_achievement["tertiary_b_value"] = tertiary_b
-        
+
         with tertiary_cols[1]:
             tertiary_b_inner = st.number_input(
                 "Tertiary #B Inner",
-                value=st.session_state.calculator_achievement.get("tertiary_b_inner_value", 1.0),
-                min_value=0.01,
+                value=st.session_state.calculator_achievement.get("tertiary_b_inner_value", 0.0),
+                min_value=0.0,
                 step=0.01,
                 key="tertiary_b_inner"
             )
@@ -2219,16 +2189,16 @@ with tab_sla:
                 "Actual",
                 value=st.session_state.calculator_achievement.get("ach_actual_value", 0.0),
                 min_value=0.0,
-                step=1.0,
+                step=0.01,
                 key="ach_actual"
             )
             st.session_state.calculator_achievement["ach_actual_value"] = ach_actual
-        
+
         with ach_cols[1]:
             ach_target = st.number_input(
                 "Target",
-                value=st.session_state.calculator_achievement.get("ach_target_value", 1.0),
-                min_value=0.01,
+                value=st.session_state.calculator_achievement.get("ach_target_value", 0.0),
+                min_value=0.0,
                 step=1.0,
                 key="ach_target"
             )
@@ -2250,18 +2220,18 @@ with tab_sla:
         with growth_cols[0]:
             growth_prev_month = st.number_input(
                 "Prepaid Revenue (Bulan Lalu)",
-                value=st.session_state.calculator_achievement.get("growth_prev_month_value", 1.0),
-                min_value=0.01,
+                value=st.session_state.calculator_achievement.get("growth_prev_month_value", 0.0),
+                min_value=0.0,
                 step=0.01,
                 key="growth_prev_month"
             )
             st.session_state.calculator_achievement["growth_prev_month_value"] = growth_prev_month
-        
+
         with growth_cols[1]:
             growth_curr_month = st.number_input(
                 "Prepaid Revenue (Bulan Ini)",
-                value=st.session_state.calculator_achievement.get("growth_curr_month_value", 1.0),
-                min_value=0.01,
+                value=st.session_state.calculator_achievement.get("growth_curr_month_value", 0.0),
+                min_value=0.0,
                 step=0.01,
                 key="growth_curr_month"
             )
@@ -2438,6 +2408,7 @@ with tab_fix:
     st.divider()
     
     st.markdown(f"### SLA {pilih_bulan.upper()} 2026")
+    mitra = "SDP (Indosat)"
     st.markdown(f"**Wilayah:** {wilayah} | **Mitra:** {mitra}")
     st.divider()
 
@@ -3027,6 +2998,42 @@ with tab_fix:
 with tab_tactical:
     st.markdown("### 🎯 Tactical Income Calculator")
     st.info("Hitung tactical income berdasarkan syarat tertentu dari pencapaian KPI & Compliance")
+    
+    # Pilihan sumber data: Maksimal vs Custom
+    tactical_data_source = st.radio(
+        "📊 Baca data dari mana?",
+        ["💎 Skenario Maksimal (110% Target)", "✏️ Input Custom (Tab 1)"],
+        horizontal=True,
+        key="tactical_data_source",
+        help="Maksimal = preview dengan asumsi 110% KPI. Custom = hasil input manual kamu di Tab 1"
+    )
+    
+    # Prepare achievement data based on selection
+    if tactical_data_source == "💎 Skenario Maksimal (110% Target)":
+        # Create maksimal achievement on-the-fly
+        tactical_achievement = {}
+        for metric in config["kpi_metrics"]:
+            metric_name = metric["name"]
+            target = metric["target"]
+            tactical_achievement[metric_name] = {"target": target, "actual": int(target * 1.1)}
+        
+        tactical_achievement.update({
+            "tertiary_inner_percentage": 0.55,
+            "ach_rgu_ga": 0.85,
+            "growth_prepaid_revenue": 0.05
+        })
+        
+        st.info("📌 Menggunakan asumsi: Semua KPI 110%, Tertiary 55%, RGU GA 85%, Growth +5%")
+    else:
+        # Use data from Tab 1 Custom input
+        tactical_achievement = st.session_state.get("calculator_achievement", {})
+        st.info("📌 Menggunakan data input manual dari Tab 1 (Mode Custom)")
+        
+        # Pastikan ada data
+        if not tactical_achievement or not any(k in tactical_achievement for k in [config["kpi_metrics"][0]["name"]]):
+            st.warning("⚠️ Belum ada data input Custom di Tab 1. Silakan isi data terlebih dahulu di Tab 1 (Mode Custom).")
+    
+    st.divider()
     
     # Get region config
     tactical_config = st.session_state.kpi_calculator_config["regions"][wilayah]

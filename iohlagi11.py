@@ -150,6 +150,9 @@ if "calculator_achievement" not in st.session_state:
 if "selected_boosts" not in st.session_state:
     st.session_state.selected_boosts = []
 
+if "selected_operator" not in st.session_state:
+    st.session_state.selected_operator = "Indosat"
+
 if "monthly_total_benefits" not in st.session_state:
     st.session_state.monthly_total_benefits = {
         "JANUARI": 0,
@@ -777,8 +780,8 @@ def format_idr_jt(value):
 # ==========================================
 def generate_pdf_report_comprehensive(wilayah, mitra, session_data):
     """
-    Generate PDF report lengkap dari semua Tab (Tab 1 hingga Tab 6)
-    dengan detail yang komprehensif
+    Generate PDF report lengkap dari semua Tab (Tab 1 hingga Tab 5)
+    dengan detail yang KOMPREHENSIF dan LENGKAP
     """
     pdf = FPDF_WithFooter()
     pdf.add_page()
@@ -787,160 +790,190 @@ def generate_pdf_report_comprehensive(wilayah, mitra, session_data):
     # Header
     pdf.set_fill_color(31, 119, 180)
     pdf.set_text_color(255, 255, 255)
-    pdf.cell(0, 15, "IOH Partner Super System", ln=True, align="C", fill=True)
+    pdf.cell(0, 15, "IOH Partner Super System - COMPREHENSIVE REPORT", ln=True, align="C", fill=True)
     
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", "", 11)
-    pdf.cell(0, 8, f"Region: {wilayah} | Mitra: {mitra}", ln=True, align="C")
+    pdf.cell(0, 8, f"Region: {wilayah} | Operator: {session_data.get('selected_operator', 'Unknown')}", ln=True, align="C")
     pdf.cell(0, 8, f"Generated: {dt.now().strftime('%d-%m-%Y %H:%M:%S')}", ln=True, align="C")
     pdf.ln(8)
     
     # ==========================================
-    # TAB 1: SLA/KPI INSENTIF
+    # TAB 1: SLA/KPI INSENTIF (LENGKAP)
     # ==========================================
     pdf.set_font("Arial", "B", 13)
     pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "1. SLA/KPI INSENTIF", ln=True, fill=True)
+    pdf.cell(0, 10, "1. SLA/KPI INSENTIF (Tab 1)", ln=True, fill=True)
     pdf.set_font("Arial", "", 10)
     
-    sla_data = session_data.get("sla_scores", {})
-    if sla_data:
-        for key, value in sla_data.items():
-            if isinstance(value, (int, float)):
-                if "sla" in key.lower():
-                    pdf.cell(0, 7, f"  - {key}: {value:.2%}", ln=True)
-                elif "rate" in key.lower() or "tarif" in key.lower():
-                    pdf.cell(0, 7, f"  - {key}: {value:.4f} (Rp {value:,.0f})", ln=True)
-                else:
-                    pdf.cell(0, 7, f"  - {key}: Rp {value:,.0f}", ln=True)
-    else:
-        pdf.cell(0, 7, "  (Data Tab 1 belum diisi)", ln=True)
+    # KPI Percentages
+    kpi_pct = session_data.get("tab1_kpi_percentages", {})
+    if kpi_pct:
+        pdf.cell(0, 7, "KPI Achievement Percentages:", ln=True)
+        for kpi_name, pct in kpi_pct.items():
+            pdf.cell(0, 6, f"  - {kpi_name}: {pct:.2f}%", ln=True)
+    
+    # KPI Capped Values
+    kpi_cap = session_data.get("tab1_kpi_capped", {})
+    if kpi_cap:
+        pdf.cell(0, 7, "KPI Capped Values (70-110%):", ln=True)
+        for kpi_name, val in kpi_cap.items():
+            pdf.cell(0, 6, f"  - {kpi_name}: {val:.2f}%", ln=True)
+    
+    # Weighted Score
+    weighted_score = session_data.get("tab1_weighted_score", 0)
+    pdf.cell(0, 7, f"Weighted Score: {weighted_score:.2f}%", ln=True)
+    
+    # Score Multiplier & SLA Tariff
+    score_mult = session_data.get("tab1_score_multiplier", 0)
+    sla_tariff = session_data.get("tab1_sla_tariff", 0)
+    pdf.cell(0, 7, f"Score Multiplier: {score_mult:.4f} ({score_mult*100:.2f}%)", ln=True)
+    pdf.cell(0, 7, f"SLA Tariff: {sla_tariff:.4f} ({sla_tariff*100:.2f}%)", ln=True)
+    
+    # Compliance
+    comp_index = session_data.get("tab1_compliance_index", 0)
+    ach_score = session_data.get("tab1_ach_score", 0)
+    growth_score = session_data.get("tab1_growth_score", 0)
+    score_comp = session_data.get("tab1_score_compliance", 0)
+    pdf.cell(0, 7, f"Compliance Index: {comp_index:.4f}", ln=True)
+    pdf.cell(0, 6, f"  - ACH Score: {ach_score:.2f} | Growth Score: {growth_score:.2f}", ln=True)
+    pdf.cell(0, 7, f"Score Compliance (Final): {score_comp:.4f}", ln=True)
+    
+    # Final Fees
+    final_fee_maks = session_data.get("tab1_final_fee_maksimal", 0)
+    final_fee_custom = session_data.get("tab1_final_fee_custom", 0)
+    pdf.cell(0, 7, f"Final Fee (Maksimal 110%): Rp {final_fee_maks:,.0f}", ln=True)
+    pdf.cell(0, 7, f"Final Fee (Custom Input): Rp {final_fee_custom:,.0f}", ln=True)
     pdf.ln(5)
     
     # ==========================================
-    # TAB 2: FIX INCOME
+    # TAB 2: FIX INCOME (LENGKAP)
     # ==========================================
     pdf.set_font("Arial", "B", 13)
     pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "2. FIX INCOME (Upfront + Inner + Tertiary)", ln=True, fill=True)
+    pdf.cell(0, 10, "2. FIX INCOME (Tab 2)", ln=True, fill=True)
     pdf.set_font("Arial", "", 10)
-    fix_data = session_data.get("fix_income_data", {})
-    if fix_data:
-        for key, value in fix_data.items():
-            if isinstance(value, (int, float)):
-                pdf.cell(0, 7, f"  - {key}: Rp {value:,.0f}", ln=True)
-            else:
-                pdf.cell(0, 7, f"  - {key}: {value}", ln=True)
-    else:
-        pdf.cell(0, 7, "  (Data Tab 2 belum diisi)", ln=True)
+    
+    # Indosat Fix Income
+    tab2_upfront = session_data.get("tab2_upfront", 0)
+    tab2_reload = session_data.get("tab2_reload_data_pack", 0)
+    tab2_voucher = session_data.get("tab2_voucher", 0)
+    tab2_outer = session_data.get("tab2_outer", 0)
+    tab2_total = session_data.get("tab2_total_income", 0)
+    
+    if tab2_total > 0:
+        pdf.cell(0, 7, "Indosat Components:", ln=True)
+        pdf.cell(0, 6, f"  - Upfront (1.5%): Rp {tab2_upfront:,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Reload & Data Pack: Rp {tab2_reload:,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Voucher Redemption: Rp {tab2_voucher:,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Outer Transaction: Rp {tab2_outer:,.0f}", ln=True)
+        pdf.cell(0, 7, f"TOTAL FIX INCOME (Indosat): Rp {tab2_total:,.0f}", ln=True)
+    
+    # Tri Fix Income
+    tab2_upfront_tri = session_data.get("tab2_upfront_tri", 0)
+    tab2_voucher_tri = session_data.get("tab2_voucher_tri", 0)
+    tab2_outer_tri = session_data.get("tab2_outer_tri", 0)
+    tab2_total_tri = session_data.get("tab2_total_income_tri", 0)
+    
+    if tab2_total_tri > 0:
+        pdf.cell(0, 7, "Tri (3 Kiosk) Components:", ln=True)
+        pdf.cell(0, 6, f"  - Upfront: Rp {tab2_upfront_tri:,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Voucher: Rp {tab2_voucher_tri:,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Outer benefit: Rp {tab2_outer_tri:,.0f}", ln=True)
+        pdf.cell(0, 7, f"TOTAL FIX INCOME (Tri): Rp {tab2_total_tri:,.0f}", ln=True)
     pdf.ln(5)
     
     # ==========================================
-    # TAB 3: TACTICAL INCOME
+    # TAB 3: TACTICAL INCOME (LENGKAP)
     # ==========================================
     pdf.set_font("Arial", "B", 13)
     pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "3. TACTICAL INCOME (Growth + Bonus + Lainnya)", ln=True, fill=True)
+    pdf.cell(0, 10, "3. TACTICAL INCOME (Tab 3)", ln=True, fill=True)
     pdf.set_font("Arial", "", 10)
+    
     tactical_data = session_data.get("tactical_income_data", {})
     if tactical_data:
         for key, value in tactical_data.items():
             if isinstance(value, (int, float)):
-                pdf.cell(0, 7, f"  - {key}: Rp {value:,.0f}", ln=True)
-            else:
-                pdf.cell(0, 7, f"  - {key}: {value}", ln=True)
-    else:
-        pdf.cell(0, 7, "  (Data Tab 3 belum diisi)", ln=True)
+                pdf.cell(0, 6, f"  - {key}: Rp {value:,.0f}", ln=True)
+    
+    total_tactical = session_data.get("total_tactical_income", 0)
+    if total_tactical > 0:
+        pdf.cell(0, 7, f"TOTAL TACTICAL INCOME: Rp {total_tactical:,.0f}", ln=True)
     pdf.ln(5)
     
     # ==========================================
-    # TAB 4: TOTAL INCOME SUMMARY
+    # TAB 4: TOTAL INCOME SUMMARY (LENGKAP)
     # ==========================================
     pdf.set_font("Arial", "B", 13)
     pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "4. TOTAL INCOME SUMMARY", ln=True, fill=True)
+    pdf.cell(0, 10, "4. TOTAL INCOME SUMMARY (Tab 4)", ln=True, fill=True)
     pdf.set_font("Arial", "", 10)
     
     total_income_maks = session_data.get("total_income_maksimal", 0)
     total_income_custom = session_data.get("total_income_custom", 0)
-    final_fee_maks = session_data.get("final_fee_maksimal", 0)
-    final_fee_custom = session_data.get("final_fee_custom", 0)
+    final_fee_maks_tab4 = session_data.get("final_fee_maksimal", 0)
+    final_fee_custom_tab4 = session_data.get("final_fee_custom", 0)
     
-    pdf.cell(0, 7, f"  Skenario Maksimal (110% Target):", ln=True)
-    pdf.cell(0, 7, f"    - Total Income: Rp {total_income_maks:,.0f}", ln=True)
-    pdf.cell(0, 7, f"    - Final Fee: Rp {final_fee_maks:,.0f}", ln=True)
-    pdf.cell(0, 7, f"  Skenario Custom (Input Manual):", ln=True)
-    pdf.cell(0, 7, f"    - Total Income: Rp {total_income_custom:,.0f}", ln=True)
-    pdf.cell(0, 7, f"    - Final Fee: Rp {final_fee_custom:,.0f}", ln=True)
+    pdf.cell(0, 7, "SCENARIO 1: Maksimal (110% Target)", ln=True)
+    pdf.cell(0, 6, f"  - Final Fee: Rp {final_fee_maks_tab4:,.0f}", ln=True)
+    pdf.cell(0, 6, f"  - Fix Income: Rp {tab2_total + tab2_total_tri:,.0f}", ln=True)
+    pdf.cell(0, 6, f"  - Tactical Income: Rp {total_tactical:,.0f}", ln=True)
+    pdf.cell(0, 7, f"  - TOTAL: Rp {total_income_maks:,.0f}", ln=True)
+    
+    pdf.cell(0, 7, "SCENARIO 2: Custom (Input Manual)", ln=True)
+    pdf.cell(0, 6, f"  - Final Fee: Rp {final_fee_custom_tab4:,.0f}", ln=True)
+    pdf.cell(0, 6, f"  - Fix Income: Rp {tab2_total + tab2_total_tri:,.0f}", ln=True)
+    pdf.cell(0, 6, f"  - Tactical Income: Rp {total_tactical:,.0f}", ln=True)
+    pdf.cell(0, 7, f"  - TOTAL: Rp {total_income_custom:,.0f}", ln=True)
     pdf.ln(5)
     
     # ==========================================
-    # TAB 5: ANALISIS CUSTOM (ACHIEVEMENT)
+    # TAB 5: BIAYA & STRATEGI (LENGKAP)
     # ==========================================
     pdf.set_font("Arial", "B", 13)
     pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "5. ANALISIS CUSTOM (Achievement Data)", ln=True, fill=True)
+    pdf.cell(0, 10, "5. BIAYA & STRATEGI (Tab 5)", ln=True, fill=True)
     pdf.set_font("Arial", "", 10)
     
-    achievement = session_data.get("calculator_achievement", {})
-    if achievement:
-        for kpi_name in ["Trade Supply", "M2S Absolute", "RGU GA FWA"]:
-            if kpi_name in achievement:
-                kpi_data = achievement[kpi_name]
-                if isinstance(kpi_data, dict):
-                    target = kpi_data.get("target", 0)
-                    actual = kpi_data.get("actual", 0)
-                    pct = (actual/target*100) if target > 0 else 0
-                    pdf.cell(0, 7, f"  - {kpi_name}: {actual:,.0f} / {target:,.0f} ({pct:.1f}%)", ln=True)
-        
-        rgu_ga = achievement.get("ach_rgu_ga", 0)
-        tertiary_pct = achievement.get("tertiary_inner_percentage", 0)
-        growth = achievement.get("growth_prepaid_revenue", 0)
-        
-        if rgu_ga > 0:
-            pdf.cell(0, 7, f"  - RGU GA Compliance: {rgu_ga:.2%}", ln=True)
-        if tertiary_pct > 0:
-            pdf.cell(0, 7, f"  - Tertiary Inner %: {tertiary_pct:.2%}", ln=True)
-        if growth != 0:
-            pdf.cell(0, 7, f"  - Growth Prepaid Revenue: {growth:.2%}", ln=True)
+    # Scenario Maksimal (110%)
+    pdf.cell(0, 6, "SCENARIO MAKSIMAL (110% Achievement):", ln=True, style="B")
+    tab5_cost_maksimal = session_data.get("tab5_cost_maksimal", {})
+    tab5_net_maksimal = session_data.get("tab5_net_maksimal", 0)
+    
+    if tab5_cost_maksimal and "breakdown" in tab5_cost_maksimal:
+        pdf.cell(0, 6, f"  - Total Cost: Rp {tab5_cost_maksimal.get('total_cost', 0):,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Net Profit: Rp {tab5_net_maksimal:,.0f}", ln=True)
+    elif tab5_cost_maksimal:
+        pdf.cell(0, 6, f"  - Total Cost: Rp {tab5_cost_maksimal.get('total_cost', 0):,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Net Profit: Rp {tab5_net_maksimal:,.0f}", ln=True)
     else:
-        pdf.cell(0, 7, "  (Data Achievement belum diisi)", ln=True)
-    pdf.ln(5)
+        pdf.cell(0, 6, "  (Data tidak tersedia)", ln=True)
     
-    # ==========================================
-    # TAB 6: BIAYA & STRATEGI
-    # ==========================================
-    pdf.set_font("Arial", "B", 13)
-    pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "6. BIAYA & STRATEGI (Setup Cost per Unit)", ln=True, fill=True)
-    pdf.set_font("Arial", "", 10)
+    pdf.ln(3)
     
-    pdf.cell(0, 7, "  Cost Per Unit Setup:", ln=True)
-    config = session_data.get("kpi_calculator_config", {})
-    regions = config.get("regions", {})
-    if wilayah in regions:
-        regional_config = regions[wilayah]
-        for metric in regional_config.get("kpi_metrics", []):
-            metric_name = metric.get("name", "Unknown")
-            cost_per_unit = metric.get("cost_per_unit", 0)
-            if cost_per_unit > 0:
-                pdf.cell(0, 7, f"    - {metric_name}: Rp {cost_per_unit:,.0f}/unit", ln=True)
-            else:
-                pdf.cell(0, 7, f"    - {metric_name}: (belum set cost)", ln=True)
+    # Scenario Custom (Input Manual)
+    pdf.cell(0, 6, "SCENARIO CUSTOM (Input Manual):", ln=True, style="B")
+    tab5_cost_custom = session_data.get("tab5_cost_custom", {})
+    tab5_net_custom = session_data.get("tab5_net_custom", 0)
     
-    cost_breakdown = session_data.get("cost_breakdown", {})
-    if cost_breakdown and "breakdown" in cost_breakdown:
-        pdf.cell(0, 7, "  Detail Perhitungan Biaya:", ln=True)
-        for kpi_name, breakdown in cost_breakdown["breakdown"].items():
+    if tab5_cost_custom and "breakdown" in tab5_cost_custom:
+        pdf.cell(0, 6, "  Cost Breakdown Per KPI:", ln=True)
+        for kpi_name, breakdown in tab5_cost_custom["breakdown"].items():
             shortfall = breakdown.get("shortfall", 0)
-            total_cost = breakdown.get("total_cost", 0)
-            if shortfall > 0:
-                pdf.cell(0, 7, f"    - {kpi_name}: Shortfall {shortfall} unit >>> Rp {total_cost:,.0f}", ln=True)
-            else:
-                pdf.cell(0, 7, f"    - {kpi_name}: Sudah tercapai (Cost: Rp 0)", ln=True)
+            cost_per_unit = breakdown.get("cost_per_unit", 0)
+            total_cost_kpi = breakdown.get("total_cost", 0)
+            pdf.cell(0, 6, f"    • {kpi_name}: Shortfall {shortfall} unit × Rp {cost_per_unit:,.0f} = Rp {total_cost_kpi:,.0f}", ln=True)
         
-        total_cost_all = cost_breakdown.get("total_cost", 0)
-        pdf.cell(0, 7, f"  TOTAL COST KESELURUHAN: Rp {total_cost_all:,.0f}", ln=True)
+        total_cost_custom_all = tab5_cost_custom.get("total_cost", 0)
+        pdf.cell(0, 6, f"  - Total Cost: Rp {total_cost_custom_all:,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Net Profit: Rp {tab5_net_custom:,.0f}", ln=True)
+    elif tab5_cost_custom:
+        pdf.cell(0, 6, f"  - Total Cost: Rp {tab5_cost_custom.get('total_cost', 0):,.0f}", ln=True)
+        pdf.cell(0, 6, f"  - Net Profit: Rp {tab5_net_custom:,.0f}", ln=True)
+    else:
+        pdf.cell(0, 6, "  (Data tidak tersedia)", ln=True)
+    
     pdf.ln(5)
     
     # ==========================================
@@ -948,16 +981,23 @@ def generate_pdf_report_comprehensive(wilayah, mitra, session_data):
     # ==========================================
     pdf.set_font("Arial", "B", 13)
     pdf.set_fill_color(220, 220, 220)
-    pdf.cell(0, 10, "7. SUMMARY & REKOMENDASI", ln=True, fill=True)
+    pdf.cell(0, 10, "6. NET PROFIT ANALYSIS", ln=True, fill=True)
     pdf.set_font("Arial", "", 10)
     
-    net_maksimal = total_income_maks - session_data.get("cost_maksimal", 0)
+    cost_maksimal = session_data.get("cost_maksimal", 0)
     cost_custom = session_data.get("cost_custom", 0)
+    
+    net_maksimal = total_income_maks - cost_maksimal
     net_custom = total_income_custom - cost_custom
     
-    pdf.cell(0, 7, f"  Net Profit Maksimal (110%): Rp {net_maksimal:,.0f}", ln=True)
-    pdf.cell(0, 7, f"  Net Profit Custom (Input): Rp {net_custom:,.0f}", ln=True)
-    pdf.cell(0, 7, f"  Selisih Profit Potential: Rp {net_maksimal - net_custom:,.0f}", ln=True)
+    pdf.cell(0, 7, f"Net Profit Maksimal: Rp {net_maksimal:,.0f}", ln=True)
+    pdf.cell(0, 6, f"  = Total Income Rp {total_income_maks:,.0f} - Cost Rp {cost_maksimal:,.0f}", ln=True)
+    
+    pdf.cell(0, 7, f"Net Profit Custom: Rp {net_custom:,.0f}", ln=True)
+    pdf.cell(0, 6, f"  = Total Income Rp {total_income_custom:,.0f} - Cost Rp {cost_custom:,.0f}", ln=True)
+    
+    profit_diff = net_maksimal - net_custom
+    pdf.cell(0, 7, f"Profit Potential (Difference): Rp {profit_diff:,.0f}", ln=True)
     
     pdf.ln(10)
     pdf.set_font("Arial", "", 9)
@@ -1728,9 +1768,27 @@ with st.sidebar:
 
     # --- HANYA UNTUK SDP DAWARBLANDONG ---
     wilayah = "DAWARBLANDONG"
-    sheet_kpi = "EST LR IM3"
     theme = "highlight-yellow"
 
+    # --- PILIHAN OPERATOR: INDOSAT ATAU TRI ---
+    st.markdown("### 📡 Pilih Operator")
+    operator_choice = st.radio(
+        "Operator:",
+        options=["🔴 Indosat", "🔵 Tri (3)"],
+        horizontal=True,
+        key="operator_selector"
+    )
+    
+    # Simpan pilihan ke session state
+    if "Indosat" in operator_choice:
+        st.session_state.selected_operator = "Indosat"
+    else:
+        st.session_state.selected_operator = "Tri"
+    
+    selected_op = st.session_state.selected_operator
+    st.divider()
+    
+    # --- FILTER BULAN ---
     bulan_map = {"Januari": 1, "Februari": 2, "Maret": 3, "April": 4, "Mei": 5, "Juni": 6, 
                  "Juli": 7, "Agustus": 8, "September": 9, "Oktober": 10, "November": 11, "Desember": 12}
     pilih_bulan = st.selectbox("Pilih Bulan (Grafik)", list(bulan_map.keys()))
@@ -1833,11 +1891,15 @@ with st.sidebar:
                 slab["rate"] = new_rate_percent / 100
 
 # PREPARE DATA
-df_kpi_sheet = get_sheet_fuzzy(dfs, sheet_kpi.replace(" ", "")) 
+df_kpi_sheet = None
 
-# --- HANYA UNTUK SDP DAWARBLANDONG ---
-wilayah = "DAWARBLANDONG"
-sheet_kpi = "EST LR IM3"
+# Tentukan sheet berdasarkan operator yang dipilih
+if selected_op == "Indosat":
+    sheet_kpi = "EST LR IM3"
+    transaction_types = ['Indosat Reload', 'Purchase Data Package']
+else:  # Tri
+    sheet_kpi = "EST LR TRI"
+    transaction_types = ['Tri Reload', 'Tri Purchase Data']
 
 df_kpi_sheet = get_sheet_fuzzy(dfs, sheet_kpi.replace(" ", "")) 
 if df_kpi_sheet is None:
@@ -1850,8 +1912,8 @@ rgu_compliance = 0
 total_income_fix_paid_in = 0
 total_amount_debit = 0
 
-# Hanya proses untuk SDP Dawarblandong (Indosat)
-t_tr, total_income_fix_paid_in, total_amount_debit = calculate_transaction_match(dfs, wilayah, transaction_types=['Indosat Reload', 'Purchase Data Package'])
+# Proses untuk SDP Dawarblandong berdasarkan operator yang dipilih
+t_tr, total_income_fix_paid_in, total_amount_debit = calculate_transaction_match(dfs, wilayah, transaction_types=transaction_types)
 # a_tr = Total Paid In dari matched transactions (BUKAN dari KPI sheet lagi)
 a_tr = total_income_fix_paid_in
 
@@ -1866,20 +1928,34 @@ saldo_total_bulan_ini = 0
 saldo_breakdown_df = pd.DataFrame()
 source_info = ""
 
-df_sal = get_sheet_fuzzy(dfs, "SAL")
-if df_sal is not None:
-    saldo_chart_df, saldo_total_bulan_ini, saldo_breakdown_df = get_daily_saldo_data_indosat(df_sal, wilayah, bulan_idx)
-    source_info = "Sumber: Sheet SAL (Filter: 'ESCM Allocation')"
+if selected_op == "Indosat":
+    # Untuk Indosat: Baca dari Sheet SAL
+    df_sal = get_sheet_fuzzy(dfs, "SAL")
+    if df_sal is not None:
+        saldo_chart_df, saldo_total_bulan_ini, saldo_breakdown_df = get_daily_saldo_data_indosat(df_sal, wilayah, bulan_idx)
+        source_info = "Sumber: Sheet SAL (Filter: 'ESCM Allocation')"
+else:
+    # Untuk Tri: Baca dari Sheet PRIM
+    df_prim = get_sheet_fuzzy(dfs, "PRIM")
+    if df_prim is not None:
+        saldo_chart_df, saldo_total_bulan_ini = get_daily_saldo_data_tri(df_prim, wilayah, bulan_idx)
+        source_info = "Sumber: Sheet PRIM (Kolom: Amount)"
 
 # --- PROSES SALES TRI (NATURAL VS BOOSTING & BREAKDOWN) ---
 tri_sales_nat = 0
 tri_sales_boost = 0
 df_sales_breakdown = pd.DataFrame()
 
+if selected_op == "Tri":
+    # Untuk Tri: Baca data sales dari Sheet SEC DSE
+    df_sec = get_sheet_fuzzy(dfs, "SEC DSE")
+    if df_sec is not None:
+        tri_sales_nat, tri_sales_boost, df_sales_breakdown = get_tri_sales_analysis(df_sec, wilayah)
+
 # ==========================================
 # KALKULATOR STRATEGI (SDP PARTNERS FEB 2026)
 # ==========================================
-st.subheader(f"🧮 Kalkulator Strategi (SDP Partners): {wilayah}")
+st.subheader(f"🧮 Kalkulator Strategi: {wilayah}")
 
 # Get config untuk DAWARBLANDONG
 full_config = st.session_state.kpi_calculator_config
@@ -2342,6 +2418,29 @@ with tab_sla:
     = **{format_currency(final_fee)}**
     """
         st.success(formula_text)
+        
+        # ==========================================
+        # SAVE TAB 1 RESULTS TO SESSION STATE
+        # ==========================================
+        st.session_state.tab1_kpi_percentages = kpi_percentages
+        st.session_state.tab1_kpi_capped = {
+            "Trade Supply": trade_capped,
+            "M2S Absolute": m2s_capped,
+            "RGU GA FWA": rgu_capped
+        }
+        st.session_state.tab1_weighted_score = weighted_score
+        st.session_state.tab1_score_multiplier = score_mult
+        st.session_state.tab1_sla_tariff = sla_tariff
+        st.session_state.tab1_compliance_index = result["compliance_index"]
+        st.session_state.tab1_ach_score = result["ach_score"]
+        st.session_state.tab1_growth_score = result["growth_score"]
+        st.session_state.tab1_score_compliance = result["score_compliance"]
+        st.session_state.tab1_final_fee_custom = final_fee
+        st.session_state.tab1_tertiary_inner = tertiary_inner
+        
+    # MAKSIMAL SCENARIO - SAVE TO SESSION STATE
+    st.session_state.tab1_result_maksimal = result_maksimal
+    st.session_state.tab1_final_fee_maksimal = result_maksimal.get("final_fee", 0)
 
 # ==========================================
 # TAB 2: FIX INCOME (DENGAN UPFRONT MARGIN SAL)
@@ -2810,6 +2909,15 @@ with tab_fix:
 
         st.success(f"✅ **TOTAL INCOME FIX:** {format_idr_jt(total_income_all)}")
         st.info(f"📊 Komponen: Upfront {format_idr_jt(upfront_margin_income)} + Reload & Data Pack {format_idr_jt(total_paid_in_reload)} + Voucher Redemption {format_idr_jt(total_voucher_reward)} + Outer Transaction {format_idr_jt(total_outer_benefit)}")
+        
+        # ==========================================
+        # SAVE TAB 2 RESULTS TO SESSION STATE (INDOSAT)
+        # ==========================================
+        st.session_state.tab2_upfront = upfront_margin_income
+        st.session_state.tab2_reload_data_pack = total_paid_in_reload
+        st.session_state.tab2_voucher = total_voucher_reward
+        st.session_state.tab2_outer = total_outer_benefit
+        st.session_state.tab2_total_income = total_income_all
 
     else:
         # ==========================================
@@ -2991,6 +3099,14 @@ with tab_fix:
 
         st.success(f"✅ **TOTAL INCOME FIX:** {format_idr_jt(total_income_all_tri)}")
         st.info(f"📊 Komponen: Upfront {format_idr_jt(upfront_margin_income_tri)} + Voucher {format_idr_jt(total_voucher_reward_tri)} + Outer {format_idr_jt(total_outer_benefit_tri)}")
+        
+        # ==========================================
+        # SAVE TAB 2 RESULTS TO SESSION STATE (TRI)
+        # ==========================================
+        st.session_state.tab2_upfront_tri = upfront_margin_income_tri
+        st.session_state.tab2_voucher_tri = total_voucher_reward_tri
+        st.session_state.tab2_outer_tri = total_outer_benefit_tri
+        st.session_state.tab2_total_income_tri = total_income_all_tri
 
 # ==========================================
 # TAB 3: TACTICAL INCOME
@@ -4197,48 +4313,91 @@ Terus monitor secara rutin dan adjust sesuai kondisi pasar/target yang berubah.
     
     for insight in insights:
         st.info(insight)
-
-# ==========================================
-# EXPORT PDF SECTION (TAB AKHIR SAJA)
-# ==========================================
-st.markdown("---")
-st.markdown("### 📥 EXPORT KE PDF")
-st.info("📄 Klik tombol di bawah untuk mengekspor SEMUA hasil dari Tab 1 hingga akhir ke dalam satu file PDF yang rapi dan lengkap")
-
-if st.button("📄 EXPORT KE PDF", key="export_pdf_btn", use_container_width=True):
-    try:
-        with st.spinner("⏳ Sedang membuat PDF... Mohon tunggu..."):
-            # Kumpulkan semua data dari session state
-            export_data = {
-                "sla_scores": st.session_state.get("sla_scores", {}),
-                "fix_income_data": st.session_state.get("fix_income_data", {}),
-                "tactical_income_data": st.session_state.get("tactical_income_data", {}),
-                "total_income_maksimal": st.session_state.get("total_income_maksimal", 0),
-                "total_income_custom": st.session_state.get("total_income_custom", 0),
-                "final_fee_maksimal": st.session_state.get("final_fee_maksimal", 0),
-                "final_fee_custom": st.session_state.get("final_fee_custom", 0),
-                "calculator_achievement": st.session_state.get("calculator_achievement", {}),
-                "kpi_calculator_config": st.session_state.get("kpi_calculator_config", {}),
-                "cost_breakdown": st.session_state.get("cost_breakdown", {}),
-                "cost_maksimal": st.session_state.get("cost_maksimal", 0),
-                "cost_custom": st.session_state.get("cost_custom", 0)
-            }
+    
+    # =========================================
+    # SAVE TAB 5 RESULTS TO SESSION STATE
+    # =========================================
+    # Save cost breakdown untuk maksimal scenario
+    st.session_state.tab5_cost_maksimal = cost_maksimal
+    st.session_state.tab5_net_maksimal = net_maksimal
+    
+    # Save cost breakdown untuk custom scenario
+    st.session_state.tab5_cost_custom = cost_custom
+    st.session_state.tab5_net_custom = net_custom
+    
+    # =========================================
+    # EXPORT PDF SECTION (DI TAB AKHIR INI)
+    # =========================================
+    st.markdown("---")
+    st.markdown("### 📥 EXPORT KE PDF")
+    st.info("📄 Klik tombol di bawah untuk mengekspor SEMUA hasil dari Tab 1 hingga akhir ke dalam satu file PDF yang rapi dan lengkap")
+    
+    if st.button("📄 EXPORT KE PDF", key="export_pdf_btn", use_container_width=True):
+        try:
+            with st.spinner("⏳ Sedang membuat PDF... Mohon tunggu..."):
+                # Kumpulkan semua data dari session state
+                export_data = {
+                    "selected_operator": st.session_state.get("selected_operator", "Indosat"),
+                    # Tab 1 Data
+                    "tab1_kpi_percentages": st.session_state.get("tab1_kpi_percentages", {}),
+                    "tab1_kpi_capped": st.session_state.get("tab1_kpi_capped", {}),
+                    "tab1_weighted_score": st.session_state.get("tab1_weighted_score", 0),
+                    "tab1_score_multiplier": st.session_state.get("tab1_score_multiplier", 0),
+                    "tab1_sla_tariff": st.session_state.get("tab1_sla_tariff", 0),
+                    "tab1_compliance_index": st.session_state.get("tab1_compliance_index", 0),
+                    "tab1_ach_score": st.session_state.get("tab1_ach_score", 0),
+                    "tab1_growth_score": st.session_state.get("tab1_growth_score", 0),
+                    "tab1_score_compliance": st.session_state.get("tab1_score_compliance", 0),
+                    "tab1_final_fee_maksimal": st.session_state.get("tab1_final_fee_maksimal", 0),
+                    "tab1_final_fee_custom": st.session_state.get("tab1_final_fee_custom", 0),
+                    "tab1_tertiary_inner": st.session_state.get("tab1_tertiary_inner", 0),
+                    "tab1_result_maksimal": st.session_state.get("tab1_result_maksimal", {}),
+                    # Tab 2 Data (Indosat)
+                    "tab2_upfront": st.session_state.get("tab2_upfront", 0),
+                    "tab2_reload_data_pack": st.session_state.get("tab2_reload_data_pack", 0),
+                    "tab2_voucher": st.session_state.get("tab2_voucher", 0),
+                    "tab2_outer": st.session_state.get("tab2_outer", 0),
+                    "tab2_total_income": st.session_state.get("tab2_total_income", 0),
+                    # Tab 2 Data (Tri)
+                    "tab2_upfront_tri": st.session_state.get("tab2_upfront_tri", 0),
+                    "tab2_voucher_tri": st.session_state.get("tab2_voucher_tri", 0),
+                    "tab2_outer_tri": st.session_state.get("tab2_outer_tri", 0),
+                    "tab2_total_income_tri": st.session_state.get("tab2_total_income_tri", 0),
+                    # Tab 3 Data
+                    "tactical_income_data": st.session_state.get("tactical_income_data", {}),
+                    "total_tactical_income": st.session_state.get("total_tactical_income", 0),
+                    # Tab 4 Data
+                    "total_income_maksimal": st.session_state.get("total_income_maksimal", 0),
+                    "total_income_custom": st.session_state.get("total_income_custom", 0),
+                    "final_fee_maksimal": st.session_state.get("final_fee_maksimal", 0),
+                    "final_fee_custom": st.session_state.get("final_fee_custom", 0),
+                    # Tab 5 Data
+                    "calculator_achievement": st.session_state.get("calculator_achievement", {}),
+                    "kpi_calculator_config": st.session_state.get("kpi_calculator_config", {}),
+                    "cost_breakdown": st.session_state.get("cost_breakdown", {}),
+                    "cost_maksimal": st.session_state.get("cost_maksimal", 0),
+                    "cost_custom": st.session_state.get("cost_custom", 0),
+                    "tab5_cost_maksimal": st.session_state.get("tab5_cost_maksimal", {}),
+                    "tab5_cost_custom": st.session_state.get("tab5_cost_custom", {}),
+                    "tab5_net_maksimal": st.session_state.get("tab5_net_maksimal", 0),
+                    "tab5_net_custom": st.session_state.get("tab5_net_custom", 0)
+                }
+                
+                # Generate PDF
+                pdf_bytes = generate_pdf_report_comprehensive(wilayah, mitra, export_data)
             
-            # Generate PDF
-            pdf_bytes = generate_pdf_report_comprehensive(wilayah, mitra, export_data)
-        
-        # Download button
-        st.download_button(
-            label="⬇️ Download PDF - Report Lengkap",
-            data=pdf_bytes,
-            file_name=f"IOH_Super_Report_{wilayah}_{dt.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-            mime="application/pdf",
-            key="download_pdf"
-        )
-        st.success("✅ PDF berhasil dibuat! Klik tombol di atas untuk mengunduh file.")
-        
-    except Exception as e:
-        st.error(f"❌ Error saat generate PDF: {str(e)}")
+            # Download button
+            st.download_button(
+                label="⬇️ Download PDF - Report Lengkap",
+                data=pdf_bytes,
+                file_name=f"IOH_Super_Report_{wilayah}_{dt.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                mime="application/pdf",
+                key="download_pdf"
+            )
+            st.success("✅ PDF berhasil dibuat! Klik tombol di atas untuk mengunduh file.")
+            
+        except Exception as e:
+            st.error(f"❌ Error saat generate PDF: {str(e)}")
 
 # ==========================================
 # FOOTER SECTION (SELALU DI BAWAH)
